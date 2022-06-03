@@ -8,7 +8,7 @@ from pygame.locals import *
 
 
 class Settings(object):
-    window_width = 1980
+    window_width = 1920
     window_height = 1080
     fps = 60
     title = "DefendTheTower"
@@ -46,7 +46,7 @@ class Settings(object):
     goblinminspeed = 3
     goblinmaxspeed = 5
     gwalk_in = 25
-    tower_in = 30
+    tower_in = 35
 
     @staticmethod
     def dim():
@@ -176,12 +176,12 @@ class Tower(pygame.sprite.Sprite):
         self.rect.bottom = Settings.window_height
 
     def tower(self):
-        if Settings.tower_in >= 30:
+        if Settings.tower_in >= 35:
             Settings.tower_in = 0
             self.animation = Animation([f"tower{i}.png" for i in range(5)], False, 100)
 
     def towercount(self):
-        if Settings.tower_in <= 30:
+        if Settings.tower_in <= 35:
                 Settings.tower_in += 1
 
     def get_height(self):
@@ -194,6 +194,39 @@ class Tower(pygame.sprite.Sprite):
         self.tower()
         self.towercount()
         self.image = self.animation.next()
+
+class Shots(pygame.sprite.Sprite):
+    def __init__(self, pos_player_x, pos_player_y, vel_x, vel_y) -> None:
+        super().__init__()
+        self.vel_x = vel_x
+        self.vel_y = vel_y
+        self.pos_shots_x = pos_player_x
+        self.pos_shots_y = pos_player_y
+        self.image = pygame.image.load(os.path.join(Settings.path_image, "shots.png")).convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.centerx = self.pos_shots_x
+        self.rect.centery = self.pos_shots_y
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+    def update(self):
+        self.rect.move_ip((self.vel_x, self.vel_y))
+        self.off_map()
+
+    def off_map(self):
+        if self.rect.top + self.vel_y > Settings.window_height:
+            self.kill()
+        if self.rect.bottom + self.vel_y < 0:
+            self.kill()
+        if self.rect.right + self.vel_x < 0:
+            self.kill()
+        if self.rect.left + self.vel_x > Settings.window_width:
+            self.kill()
+
+    def center(self, pos_player_x, pos_player_y):
+        self.pos_shots_x = pos_player_x
+        self.pos_shots_y = pos_player_y
 
 
 class Fighter(pygame.sprite.Sprite):
@@ -285,7 +318,11 @@ class Fighter(pygame.sprite.Sprite):
     def get_center(self):
         return self.rect.center
 
+    def center_update(self):
+        self.rect = self.image.get_rect(center=self.rect.center)
+
     def update(self):
+        self.center_update()
         self.idlecount()
         self.leftcount()
         self.rightcount()
@@ -334,6 +371,8 @@ class Game(object):
         self.fighter = pygame.sprite.GroupSingle(Fighter())
         self.goblin = pygame.sprite.Group(Goblin())
         self.tower = pygame.sprite.GroupSingle(Tower())
+        self.shots = pygame.sprite.Group()
+        self.shot = Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0)
         self.running = False
 
     def run(self) -> None:
@@ -345,6 +384,12 @@ class Game(object):
             self.update()
             self.draw()
         pygame.quit()
+
+    def shoting_shots(self):
+        if len(self.shots.sprites()) <= 10:
+            self.shot.center(self.fighter.sprite.rect.centerx,self.fighter.sprite.rect.centery+200)
+            self.shots.add(Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0))
+
 
     def goblin_spawn(self):
         if Settings.goblin_cooldown >= 60:
@@ -371,6 +416,8 @@ class Game(object):
                     pass
                 elif event.key == K_RIGHT:
                     pass
+                elif event.key == K_DOWN:
+                    self.shoting_shots()
 
     def update(self) -> None:
         self.fighter.update()
@@ -379,12 +426,14 @@ class Game(object):
         self.goblin_spawn()
         self.goblin_cooldown()
         self.g_t_collide()
+        self.shots.update()
 
     def draw(self) -> None:
         self.background.draw(self.screen)
         self.fighter.draw(self.screen)
         self.goblin.draw(self.screen)
         self.tower.draw(self.screen)
+        self.shots.draw(self.screen)
         pygame.display.flip()
 
     def start(self):
