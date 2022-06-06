@@ -181,8 +181,8 @@ class Goblinbird(pygame.sprite.Sprite):
         self.animation = Animation([f"goblin_bird_{i}.png" for i in range(7)], False, 1) # §\label{srcAnimation0102}§
         self.image = self.animation.next()
         self.rect = self.image.get_rect()
-        self.rect.bottom = randint(Settings.window_height/2 + self.get_height(),Settings.window_height - self.get_height())  # Spawnpoint des Players (Unten mittig)
-        self.rect.left = Settings.window_width - self.rect.width / 2  # Spawnpoint des Players (Unten mittig)
+        self.rect.bottom = randint(Settings.window_height/2 + self.get_height(),Settings.window_height - self.get_height())  
+        self.rect.left = Settings.window_width - self.rect.width / 2  
         self.speed_h = randint(Settings.gbirdminspeed, Settings.gbirdmaxspeed)
         self.speed_v = 0
 
@@ -280,8 +280,8 @@ class Fighter(pygame.sprite.Sprite):
         self.animation=Animation([f"player{i}_idle.png" for i in range(4)], False, 1) # §\label{srcAnimation0102}§
         self.image = self.animation.next()
         self.rect = self.image.get_rect()
-        self.rect.top = Settings.window_height - self.get_height()  # Spawnpoint des Players (Unten mittig)
-        self.rect.left = Settings.window_width / 2 - self.rect.width / 2  # Spawnpoint des Players (Unten mittig)
+        self.rect.top = Settings.window_height - self.get_height() 
+        self.rect.left = Settings.window_width / 2 - self.rect.width / 2 
 
     def jump(self):
         if Settings.jump == True:
@@ -394,7 +394,7 @@ class Fighter(pygame.sprite.Sprite):
             Settings.right = True
             #if self.rect.top == Settings.window_height - self.get_height():
 
-        elif keys[pygame.K_SPACE] and self.rect.top - Settings.player_vel > 0 and Settings.jump_indicator == 1 and Settings.jump_deny == 1 and Settings.animation_indicator == 1:  # jump
+        elif keys[pygame.K_SPACE] and self.rect.top - Settings.player_vel > 0 and Settings.jump_indicator == 1 and Settings.jump_deny == 1 and Settings.animation_indicator == 1: 
             Settings.jump = True
             Settings.isjump = True
             Settings.jump_deny = 3
