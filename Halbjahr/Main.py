@@ -16,8 +16,11 @@ class Settings(object):
     path['file'] = os.path.dirname(os.path.abspath(__file__))
     path['image'] = os.path.join(path['file'], "images")
     path_file = os.path.dirname(os.path.abspath(__file__))
+    sound_path = os.path.join(path_file, "sounds")
     path_image = os.path.join(path_file, "images")
     directions = {'stop':(0, 0), 'down':(0,  1), 'up':(0, -1), 'left':(-1, 0), 'right':(1, 0)}
+    alive = True
+    level = 0
     player_vel = 5
     player_jumpvel_standart = 10
     attack_cooldown = 100
@@ -42,11 +45,17 @@ class Settings(object):
     hp = 100
     points = 0
     goblin_cooldown = 0
+    gbird_cooldown = 0
     nof_goblins = 3
+    nof_birds = 3
     goblinminspeed = 3
     goblinmaxspeed = 5
+    gbirdminspeed = 2
+    gbirdmaxspeed = 4
     gwalk_in = 25
+    gbird_in = 30
     tower_in = 35
+    shot_cooldown = 0
 
     @staticmethod
     def dim():
@@ -133,7 +142,7 @@ class Background(object):
 class Goblin(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.animation = Animation([f"goblin_walk{i}.png" for i in range(5)], False, 1) # §\label{srcAnimation0102}§
+        self.animation = Animation([f"goblin_walk{i}.png" for i in range(6)], False, 1) # §\label{srcAnimation0102}§
         self.image = self.animation.next()
         self.rect = self.image.get_rect()
         self.rect.top = Settings.window_height - self.get_height()  # Spawnpoint des Players (Unten mittig)
@@ -149,6 +158,42 @@ class Goblin(pygame.sprite.Sprite):
     def gwalkcount(self):
         if Settings.gwalk_in <= 25:
                 Settings.gwalk_in += 1
+
+    def get_width(self):
+        return self.rect.width
+
+    def get_height(self):
+        return self.rect.height
+
+    def get_center(self):
+        return self.rect.center
+
+    def update(self):
+        self.rect.move_ip((-self.speed_h, self.speed_v))
+        self.gwalkcount()
+        self.gwalk()
+        self.image = self.animation.next()
+
+
+class Goblinbird(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.animation = Animation([f"goblin_bird_{i}.png" for i in range(7)], False, 1) # §\label{srcAnimation0102}§
+        self.image = self.animation.next()
+        self.rect = self.image.get_rect()
+        self.rect.bottom = randint(Settings.window_height/2 + self.get_height(),Settings.window_height - self.get_height())  # Spawnpoint des Players (Unten mittig)
+        self.rect.left = Settings.window_width - self.rect.width / 2  # Spawnpoint des Players (Unten mittig)
+        self.speed_h = randint(Settings.gbirdminspeed, Settings.gbirdmaxspeed)
+        self.speed_v = 0
+
+    def gwalk(self):
+        if Settings.gbird_in >= 25:
+            Settings.gbird_in = 0
+            self.animation = Animation([f"goblin_bird_{i}.png" for i in range(7)], False, 100)
+
+    def gwalkcount(self):
+        if Settings.gbird_in <= 25:
+                Settings.gbird_in += 1
 
     def get_width(self):
         return self.rect.width
@@ -370,9 +415,14 @@ class Game(object):
         self.clock = pygame.time.Clock()
         self.fighter = pygame.sprite.GroupSingle(Fighter())
         self.goblin = pygame.sprite.Group(Goblin())
+        self.gbird = pygame.sprite.Group(Goblinbird())
         self.tower = pygame.sprite.GroupSingle(Tower())
         self.shots = pygame.sprite.Group()
         self.shot = Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0)
+        self.pause_screen_main = pygame.image.load(os.path.join(Settings.path_image, "pausescreen.png")).convert_alpha()
+        self.pause_screen = pygame.transform.scale(self.pause_screen_main,(Settings.window_width, Settings.window_height))
+        self.gameover_screen_main = pygame.image.load(os.path.join(Settings.path_image, "deathscreen.png")).convert_alpha()
+        self.gameover_screen = pygame.transform.scale(self.gameover_screen_main,(Settings.window_width, Settings.window_height))
         self.running = False
 
     def run(self) -> None:
@@ -385,10 +435,92 @@ class Game(object):
             self.draw()
         pygame.quit()
 
-    def shoting_shots(self):
-        if len(self.shots.sprites()) <= 10:
-            self.shot.center(self.fighter.sprite.rect.centerx,self.fighter.sprite.rect.centery+200)
-            self.shots.add(Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0))
+    def pause_game(self):
+        paused = True
+        while paused:
+            print("Paused")
+            self.draw_pause_screen()
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        print("Unpaused")
+                        paused = False
+
+    def draw_pause_screen(self):
+        self.screen.blit(self.pause_screen, (0, 0))
+        pygame.display.flip()
+
+    def increase_difficulty(self):
+        if Settings.points >= 100 and Settings.level == 0:
+            Settings.level += 1
+            Settings.goblinminspeed += 1
+            Settings.goblinmaxspeed += 1
+            Settings.gbirdminspeed += 1
+            Settings.gbirdmaxspeed += 1
+        elif Settings.points >= 150 and Settings.level == 1:
+            Settings.level += 1
+            Settings.goblinminspeed += 1
+            Settings.goblinmaxspeed += 1
+            Settings.gbirdminspeed += 1
+            Settings.gbirdmaxspeed += 1
+        elif Settings.points >= 200 and Settings.level == 2:
+            Settings.level += 1
+            Settings.goblinminspeed += 1
+            Settings.goblinmaxspeed += 1
+            Settings.gbirdminspeed += 1
+            Settings.gbirdmaxspeed += 1
+
+
+    def shooting_shots(self):
+        if Settings.shot_cooldown >= 20:
+            Settings.shot_cooldown = 0
+            if len(self.shots.sprites()) <= 10:
+                pygame.mixer.Channel(4).set_volume(0.1)
+                pygame.mixer.Channel(4).play(pygame.mixer.Sound('sounds\shot.wav'))
+                self.shot.center(self.fighter.sprite.rect.centerx,self.fighter.sprite.rect.centery+200)
+                self.shots.add(Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0))
+
+    def shot_cooldown(self):
+        if Settings.shot_cooldown <= 20:
+            Settings.shot_cooldown += 1
+
+    def check_if_lose(self):
+        if Settings.hp <= 0:
+            Settings.alive = False
+
+    def gameover(self):
+        if Settings.alive == False:
+            for Goblin in self.goblin.sprites():
+                Goblin.remove(self.goblin)
+            for Goblinbird in self.gbird.sprites():
+                Goblinbird.remove(self.gbird)
+            Settings.points = 0
+            Settings.hp = 100
+            self.difficulty_reset()
+            Settings.alive = True
+            self.gameover_execute()
+
+    def gameover_execute(self):
+        pausedg = True
+        while pausedg:
+            self.draw_gameover_screen()
+            print("Dead")
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_BACKSPACE:
+                        pausedg = False
+                        print("Alive")
+
+    def difficulty_reset(self):
+        Settings.goblinminspeed = 3
+        Settings.goblinmaxspeed = 5
+        Settings.gbirdminspeed = 2
+        Settings.gbirdmaxspeed = 4
+        Settings.level = 0
+
+    def draw_gameover_screen(self):
+        self.screen.blit(self.gameover_screen, (0, 0))
+        pygame.display.flip()
 
 
     def goblin_spawn(self):
@@ -397,13 +529,53 @@ class Game(object):
             if len(self.goblin.sprites()) < Settings.nof_goblins:
                 self.goblin.add(Goblin())
 
+    def gbird_spawn(self):
+        if Settings.gbird_cooldown >= 90:
+            Settings.gbird_cooldown = 0
+            if len(self.gbird.sprites()) < Settings.nof_birds:
+                self.gbird.add(Goblinbird())
+
     def goblin_cooldown(self):
         if Settings.goblin_cooldown <= 60:
             Settings.goblin_cooldown += 1
+        if Settings.gbird_cooldown <= 90:
+            Settings.gbird_cooldown += 1
 
 
     def g_t_collide(self):
-        pygame.sprite.groupcollide(self.goblin, self.tower, True, False,pygame.sprite.collide_rect)  # Standart rect collision
+        if pygame.sprite.groupcollide(self.goblin, self.tower, True, False,pygame.sprite.collide_rect):
+            pygame.sprite.groupcollide(self.goblin, self.tower, True, False, pygame.sprite.collide_rect)
+            Settings.hp -= 5
+            pygame.mixer.Channel(0).set_volume(0.1)
+            pygame.mixer.Channel(0).play(pygame.mixer.Sound('sounds\explosion.mp3'))
+
+
+    def gb_t_collide(self):
+        if pygame.sprite.groupcollide(self.gbird, self.tower, True, False,pygame.sprite.collide_rect):
+            pygame.sprite.groupcollide(self.gbird, self.tower, True, False,pygame.sprite.collide_rect)
+            Settings.hp -= 3
+            pygame.mixer.Channel(1).set_volume(0.1)
+            pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds\explosion.mp3'))
+
+    def s_g_collide(self):
+        if pygame.sprite.groupcollide(self.goblin, self.shots, True, True,pygame.sprite.collide_rect):
+            pygame.sprite.groupcollide(self.goblin, self.shots, True, True, pygame.sprite.collide_rect)
+            Settings.points += 2
+            pygame.mixer.Channel(2).set_volume(0.1)
+            pygame.mixer.Channel(2).play(pygame.mixer.Sound('sounds\goblin_death.mp3'))
+
+    def s_gb_collide(self):
+        if pygame.sprite.groupcollide(self.gbird, self.shots, True, True, pygame.sprite.collide_rect):
+            pygame.sprite.groupcollide(self.gbird, self.shots, True, True, pygame.sprite.collide_rect)
+            Settings.points += 5
+            pygame.mixer.Channel(3).set_volume(0.1)
+            pygame.mixer.Channel(3).play(pygame.mixer.Sound('sounds\gbird_death.wav'))
+
+    def backgroundmusic(self):
+        pygame.mixer.music.load(os.path.join(Settings.sound_path, "backgroundmusic.mp3"))
+        pygame.mixer.music.set_volume(.2)
+        pygame.mixer.music.play(-1, 0.2, 0)
+
 
     def watch_for_events(self) -> None:
         for event in pygame.event.get():
@@ -417,16 +589,27 @@ class Game(object):
                 elif event.key == K_RIGHT:
                     pass
                 elif event.key == K_DOWN:
-                    self.shoting_shots()
+                    self.shooting_shots()
+                elif event.key == K_p:
+                    self.pause_game()
 
     def update(self) -> None:
+        self.increase_difficulty()
+        self.shot_cooldown()
         self.fighter.update()
         self.goblin.update()
         self.tower.update()
         self.goblin_spawn()
         self.goblin_cooldown()
+        self.gbird.update()
+        self.gbird_spawn()
         self.g_t_collide()
+        self.gb_t_collide()
         self.shots.update()
+        self.s_g_collide()
+        self.s_gb_collide()
+        self.check_if_lose()
+        self.gameover()
 
     def draw(self) -> None:
         self.background.draw(self.screen)
@@ -434,10 +617,12 @@ class Game(object):
         self.goblin.draw(self.screen)
         self.tower.draw(self.screen)
         self.shots.draw(self.screen)
+        self.gbird.draw(self.screen)
         pygame.display.flip()
 
     def start(self):
         self.background = Background()
+        self.backgroundmusic()
 
 
 if __name__ == '__main__':
