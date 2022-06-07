@@ -1,0 +1,7 @@
+ESC: Das Spiel schließen
+Stuerkreuz-Rechts: Rechtsmovement
+Steuerkreuz-Links: Linksmovement
+Steuerkreuz-Unten: Schuss
+P: Pause
+Backspace: Restart wenn verloren
+Space: Jump
