@@ -4,7 +4,7 @@ import os
 import pygame
 from random import randint
 import sys
-from pygame.locals import *
+from pygame.locals import * #Für den Fullscreen
 
 
 class Settings(object):
@@ -100,7 +100,7 @@ class Animation(object):
                 bitmap = pygame.image.load(Settings.imagepath(filename)).convert_alpha()
             else:
                 bitmap = pygame.image.load(Settings.imagepath(filename)).convert()
-                bitmap.set_colorkey(colorkey)           # Transparenz herstellen §\label{srcAnimation0101}§
+                bitmap.set_colorkey(colorkey)
             self.images.append(bitmap)
         self.imageindex = -1
 
@@ -133,8 +133,6 @@ class Background(object):
         main_font = pygame.font.SysFont("comicsans", 50) #Schriftart von der Font
         towerhp_label = main_font.render(f"Tower HP: {Settings.hp}", False, (255, 0, 0)) #Farben der Fonts
         point_label = main_font.render(f"Points: {Settings.points}", False, (255, 0, 0))
-        #level_label = main_font.render(f"Difficulty: {Settings.level_indicator}", 1, (255, 0, 0))
-        #screen.blit(level_label, (10, Settings.window_height - point_label.get_height() - 10)) #Koordinaten der Fonts
         screen.blit(towerhp_label, (10, 10))
         screen.blit(point_label, (Settings.window_width - point_label.get_width() - 10, 10))
 
@@ -150,13 +148,13 @@ class Goblin(pygame.sprite.Sprite):
         self.speed_h = randint(Settings.goblinminspeed, Settings.goblinmaxspeed)
         self.speed_v = 0
 
-    def gwalk(self):
+    def gwalk(self):                        #Animation für den walk
         if Settings.gwalk_in >= 25:
             Settings.gwalk_in = 0
             self.animation = Animation([f"goblin_walk{i}.png" for i in range(5)], False, 100)
 
     def gwalkcount(self):
-        if Settings.gwalk_in <= 25:
+        if Settings.gwalk_in <= 25:         #Animations cooldown
                 Settings.gwalk_in += 1
 
     def get_width(self):
@@ -181,17 +179,17 @@ class Goblinbird(pygame.sprite.Sprite):
         self.animation = Animation([f"goblin_bird_{i}.png" for i in range(7)], False, 1) # §\label{srcAnimation0102}§
         self.image = self.animation.next()
         self.rect = self.image.get_rect()
-        self.rect.bottom = randint(Settings.window_height/2 + self.get_height(),Settings.window_height - self.get_height())  
-        self.rect.left = Settings.window_width - self.rect.width / 2  
+        self.rect.bottom = randint(Settings.window_height/2 + self.get_height(),Settings.window_height - self.get_height())  # Spawnpoint des Players (Unten mittig)
+        self.rect.left = Settings.window_width - self.rect.width / 2  # Spawnpoint des Players (Unten mittig)
         self.speed_h = randint(Settings.gbirdminspeed, Settings.gbirdmaxspeed)
         self.speed_v = 0
 
-    def gwalk(self):
+    def gwalk(self):                    #Animation bewegung
         if Settings.gbird_in >= 25:
             Settings.gbird_in = 0
             self.animation = Animation([f"goblin_bird_{i}.png" for i in range(7)], False, 100)
 
-    def gwalkcount(self):
+    def gwalkcount(self):               #Animation cooldown
         if Settings.gbird_in <= 25:
                 Settings.gbird_in += 1
 
@@ -220,12 +218,12 @@ class Tower(pygame.sprite.Sprite):
         self.rect.top = Settings.window_height - self.get_height()
         self.rect.bottom = Settings.window_height
 
-    def tower(self):
+    def tower(self):                    #Tower animation
         if Settings.tower_in >= 35:
             Settings.tower_in = 0
             self.animation = Animation([f"tower{i}.png" for i in range(5)], False, 100)
 
-    def towercount(self):
+    def towercount(self):              #Animation cooldown
         if Settings.tower_in <= 35:
                 Settings.tower_in += 1
 
@@ -259,7 +257,7 @@ class Shots(pygame.sprite.Sprite):
         self.rect.move_ip((self.vel_x, self.vel_y))
         self.off_map()
 
-    def off_map(self):
+    def off_map(self):                          #Wenn der shot außerhalb der map ist despawnt er
         if self.rect.top + self.vel_y > Settings.window_height:
             self.kill()
         if self.rect.bottom + self.vel_y < 0:
@@ -280,13 +278,12 @@ class Fighter(pygame.sprite.Sprite):
         self.animation=Animation([f"player{i}_idle.png" for i in range(4)], False, 1) # §\label{srcAnimation0102}§
         self.image = self.animation.next()
         self.rect = self.image.get_rect()
-        self.rect.top = Settings.window_height - self.get_height() 
-        self.rect.left = Settings.window_width / 2 - self.rect.width / 2 
+        self.rect.top = Settings.window_height - self.get_height()  # Spawnpoint des Players (Unten mittig)
+        self.rect.left = Settings.window_width / 2 - self.rect.width / 2  # Spawnpoint des Players (Unten mittig)
 
-    def jump(self):
+    def jump(self):                         #jump
         if Settings.jump == True:
             self.rect.top -= Settings.jumpvel_up
-            #Settings.jumpvel_up = Settings.jumpvel_up -
             Settings.jump_decay += 1
             if Settings.jump_decay >= 60:
                 Settings.jumpvel_up = Settings.player_jumpvel_standart
@@ -313,18 +310,18 @@ class Fighter(pygame.sprite.Sprite):
         if Settings.jumpdown == 15:
             Settings.jumpvel_down = Settings.jumpvel_down * 1.5
 
-    def idle(self):
+    def idle(self):                     #Idle animation
         if Settings.idle == True and Settings.idle_in >= 30:
             Settings.idle_in = 0
             self.animation = Animation([f"player{i}_idle.png" for i in range(4)], False, 100)
 
-    def left(self):
+    def left(self):                     #links laufen animation
         if Settings.left == True and Settings.left_in >= 20:
             Settings.left_in = 0
             self.animation = Animation([f"player{i}_left.png" for i in range(4)], False, 100)
 
 
-    def right(self):
+    def right(self):                    #rechts laufen animation
         if Settings.right == True and Settings.right_in >= 20:
             Settings.right_in = 0
             self.animation = Animation([f"player{i}_right.png" for i in range(4)], False, 100)
@@ -386,15 +383,14 @@ class Fighter(pygame.sprite.Sprite):
             Settings.idle = False
             Settings.right = False
             Settings.left = True
-            #if self.rect.top == Settings.window_height - self.get_height():
+
         elif keys[pygame.K_RIGHT] and self.rect.left + Settings.player_vel + self.get_width() < Settings.window_width:  # rechts movement
             self.rect.left += Settings.player_vel
             Settings.idle = False
             Settings.left = False
             Settings.right = True
-            #if self.rect.top == Settings.window_height - self.get_height():
 
-        elif keys[pygame.K_SPACE] and self.rect.top - Settings.player_vel > 0 and Settings.jump_indicator == 1 and Settings.jump_deny == 1 and Settings.animation_indicator == 1: 
+        elif keys[pygame.K_SPACE] and self.rect.top - Settings.player_vel > 0 and Settings.jump_indicator == 1 and Settings.jump_deny == 1 and Settings.animation_indicator == 1:  # jump
             Settings.jump = True
             Settings.isjump = True
             Settings.jump_deny = 3
@@ -410,7 +406,7 @@ class Game(object):
         super().__init__()
         os.environ['SDL_VIDEO_WINDOW_POS'] = "10, 50"
         pygame.init()
-        self.screen = pygame.display.set_mode(Settings.dim(), FULLSCREEN)
+        self.screen = pygame.display.set_mode(Settings.dim(), FULLSCREEN)   #Fullscreen
         pygame.display.set_caption(Settings.title)
         self.clock = pygame.time.Clock()
         self.fighter = pygame.sprite.GroupSingle(Fighter())
@@ -494,6 +490,8 @@ class Game(object):
                 Goblin.remove(self.goblin)
             for Goblinbird in self.gbird.sprites():
                 Goblinbird.remove(self.gbird)
+            for Shots in self.shots.sprites():
+                Shots.remove(self.shots)
             Settings.points = 0
             Settings.hp = 100
             self.difficulty_reset()
@@ -546,7 +544,7 @@ class Game(object):
         if pygame.sprite.groupcollide(self.goblin, self.tower, True, False,pygame.sprite.collide_rect):
             pygame.sprite.groupcollide(self.goblin, self.tower, True, False, pygame.sprite.collide_rect)
             Settings.hp -= 5
-            pygame.mixer.Channel(0).set_volume(0.1)
+            pygame.mixer.Channel(0).set_volume(0.1)             #bei den sounds müssen verschiedene Channel benutzt werden somit wird der sound von anderen sources nicht unterdrückt
             pygame.mixer.Channel(0).play(pygame.mixer.Sound('sounds\explosion.mp3'))
 
 
@@ -573,8 +571,8 @@ class Game(object):
 
     def backgroundmusic(self):
         pygame.mixer.music.load(os.path.join(Settings.sound_path, "backgroundmusic.mp3"))
-        pygame.mixer.music.set_volume(.2)
-        pygame.mixer.music.play(-1, 0.2, 0)
+        pygame.mixer.music.set_volume(0.2)
+        pygame.mixer.music.play(-1, 0.2, 0) #-1 ist loop
 
 
     def watch_for_events(self) -> None:
@@ -622,7 +620,7 @@ class Game(object):
 
     def start(self):
         self.background = Background()
-        self.backgroundmusic()
+        self.backgroundmusic()              #Backgroundmusik wird nur am anfang einmal abgespielt ist aber permanent gelooped
 
 
 if __name__ == '__main__':
