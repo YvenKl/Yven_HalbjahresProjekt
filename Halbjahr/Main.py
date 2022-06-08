@@ -6,6 +6,7 @@ from random import randint
 import sys
 from pygame.locals import * #Für den Fullscreen
 
+#Die Performance kann bei nicht so leistungsvollen Rechnern in die Knie gehen
 
 class Settings(object):
     window_width = 1920
@@ -15,8 +16,10 @@ class Settings(object):
     path = {}
     path['file'] = os.path.dirname(os.path.abspath(__file__))
     path['image'] = os.path.join(path['file'], "images")
+    path['sound'] = os.path.join(path['file'], 'sounds')
     path_file = os.path.dirname(os.path.abspath(__file__))
     sound_path = os.path.join(path_file, "sounds")
+    print(sound_path)
     path_image = os.path.join(path_file, "images")
     directions = {'stop':(0, 0), 'down':(0,  1), 'up':(0, -1), 'left':(-1, 0), 'right':(1, 0)}
     alive = True
@@ -68,6 +71,9 @@ class Settings(object):
     @staticmethod
     def imagepath(name):
         return os.path.join(Settings.path['image'], name)
+
+    def soundpath(name):
+        return os.path.join(Settings.path['sound'], name)
 
 
 class Timer(object):
@@ -121,6 +127,7 @@ class Animation(object):
             return True
         else:
             return False
+
 
 class Background(object):
     def __init__(self, filename="background.jpg") -> None:
@@ -238,6 +245,7 @@ class Tower(pygame.sprite.Sprite):
         self.towercount()
         self.image = self.animation.next()
 
+
 class Shots(pygame.sprite.Sprite):
     def __init__(self, pos_player_x, pos_player_y, vel_x, vel_y) -> None:
         super().__init__()
@@ -303,7 +311,7 @@ class Fighter(pygame.sprite.Sprite):
             Settings.jump_deny = 1
             Settings.isjump = False
 
-    def jump_logic(self):
+    def jump_logic(self):        #Nach 3/4 des Jumps verlangsamt sich die Höhenzunahme, beim 1/4 runterfallen verschnellert sich die Fallgeschwindigkeit um 50%
         if Settings.jump_decay == 45:
             Settings.jumpvel_up = Settings.jumpvel_up / 2
 
@@ -325,6 +333,8 @@ class Fighter(pygame.sprite.Sprite):
         if Settings.right == True and Settings.right_in >= 20:
             Settings.right_in = 0
             self.animation = Animation([f"player{i}_right.png" for i in range(4)], False, 100)
+
+#Die Counts sind nur dazu da die Animationen kontinuirlich abzuspielen
 
     def idlecount(self):
         if Settings.idle == True:
@@ -396,7 +406,7 @@ class Fighter(pygame.sprite.Sprite):
             Settings.jump_deny = 3
 
         else:
-            Settings.right = False
+            Settings.right = False          #idle
             Settings.left = False
             Settings.idle = True
 
@@ -406,7 +416,7 @@ class Game(object):
         super().__init__()
         os.environ['SDL_VIDEO_WINDOW_POS'] = "10, 50"
         pygame.init()
-        self.screen = pygame.display.set_mode(Settings.dim(), FULLSCREEN)   #Fullscreen
+        self.screen = pygame.display.set_mode(Settings.dim(), FULLSCREEN)   #Fullscreen, entfernen sie das Komma und das FULLSCREEN wenn es für fehler beim Anzeigen sorgt.
         pygame.display.set_caption(Settings.title)
         self.clock = pygame.time.Clock()
         self.fighter = pygame.sprite.GroupSingle(Fighter())
@@ -431,7 +441,7 @@ class Game(object):
             self.draw()
         pygame.quit()
 
-    def pause_game(self):
+    def pause_game(self):       #Pausenfunktion
         paused = True
         while paused:
             print("Paused")
@@ -446,7 +456,7 @@ class Game(object):
         self.screen.blit(self.pause_screen, (0, 0))
         pygame.display.flip()
 
-    def increase_difficulty(self):
+    def increase_difficulty(self):                             #hier wird die Schwierigkeit anhand des Scores erhöht
         if Settings.points >= 100 and Settings.level == 0:
             Settings.level += 1
             Settings.goblinminspeed += 1
@@ -466,15 +476,14 @@ class Game(object):
             Settings.gbirdminspeed += 1
             Settings.gbirdmaxspeed += 1
 
-
     def shooting_shots(self):
         if Settings.shot_cooldown >= 20:
             Settings.shot_cooldown = 0
             if len(self.shots.sprites()) <= 10:
                 pygame.mixer.Channel(4).set_volume(0.1)
-                pygame.mixer.Channel(4).play(pygame.mixer.Sound('sounds\shot.wav'))
+                pygame.mixer.Channel(4).play(pygame.mixer.Sound(Settings.soundpath('shot.wav')))
                 self.shot.center(self.fighter.sprite.rect.centerx,self.fighter.sprite.rect.centery+200)
-                self.shots.add(Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0))
+                self.shots.add(Shots(self.fighter.sprite.rect.centerx, self.fighter.sprite.rect.centery+200, 5, 0))  #weil das Bild nicht richtig angepasst ist muss ich von der höhe 200Pixel abziehen
 
     def shot_cooldown(self):
         if Settings.shot_cooldown <= 20:
@@ -520,14 +529,13 @@ class Game(object):
         self.screen.blit(self.gameover_screen, (0, 0))
         pygame.display.flip()
 
-
-    def goblin_spawn(self):
+    def goblin_spawn(self):                            #es wird maximal ein Gbolin pro Sekunde erzeugt, max 3
         if Settings.goblin_cooldown >= 60:
             Settings.goblin_cooldown = 0
             if len(self.goblin.sprites()) < Settings.nof_goblins:
                 self.goblin.add(Goblin())
 
-    def gbird_spawn(self):
+    def gbird_spawn(self):                              #es wird maximal ein Vogel pro 1,5 Sekunden erzeugt, max 3
         if Settings.gbird_cooldown >= 90:
             Settings.gbird_cooldown = 0
             if len(self.gbird.sprites()) < Settings.nof_birds:
@@ -539,41 +547,38 @@ class Game(object):
         if Settings.gbird_cooldown <= 90:
             Settings.gbird_cooldown += 1
 
-
     def g_t_collide(self):
         if pygame.sprite.groupcollide(self.goblin, self.tower, True, False,pygame.sprite.collide_rect):
             pygame.sprite.groupcollide(self.goblin, self.tower, True, False, pygame.sprite.collide_rect)
             Settings.hp -= 5
             pygame.mixer.Channel(0).set_volume(0.1)             #bei den sounds müssen verschiedene Channel benutzt werden somit wird der sound von anderen sources nicht unterdrückt
-            pygame.mixer.Channel(0).play(pygame.mixer.Sound('sounds\explosion.mp3'))
-
+            pygame.mixer.Channel(0).play(pygame.mixer.Sound(Settings.soundpath('explosion.mp3')))
 
     def gb_t_collide(self):
         if pygame.sprite.groupcollide(self.gbird, self.tower, True, False,pygame.sprite.collide_rect):
             pygame.sprite.groupcollide(self.gbird, self.tower, True, False,pygame.sprite.collide_rect)
             Settings.hp -= 3
             pygame.mixer.Channel(1).set_volume(0.1)
-            pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds\explosion.mp3'))
+            pygame.mixer.Channel(1).play(pygame.mixer.Sound(Settings.soundpath('explosion.mp3')))
 
     def s_g_collide(self):
         if pygame.sprite.groupcollide(self.goblin, self.shots, True, True,pygame.sprite.collide_rect):
             pygame.sprite.groupcollide(self.goblin, self.shots, True, True, pygame.sprite.collide_rect)
             Settings.points += 2
             pygame.mixer.Channel(2).set_volume(0.1)
-            pygame.mixer.Channel(2).play(pygame.mixer.Sound('sounds\goblin_death.mp3'))
+            pygame.mixer.Channel(2).play(pygame.mixer.Sound(Settings.soundpath('goblin_death.mp3')))
 
     def s_gb_collide(self):
         if pygame.sprite.groupcollide(self.gbird, self.shots, True, True, pygame.sprite.collide_rect):
             pygame.sprite.groupcollide(self.gbird, self.shots, True, True, pygame.sprite.collide_rect)
             Settings.points += 5
             pygame.mixer.Channel(3).set_volume(0.1)
-            pygame.mixer.Channel(3).play(pygame.mixer.Sound('sounds\gbird_death.wav'))
+            pygame.mixer.Channel(3).play(pygame.mixer.Sound(Settings.soundpath('gbird_death.wav')))
 
     def backgroundmusic(self):
         pygame.mixer.music.load(os.path.join(Settings.sound_path, "backgroundmusic.mp3"))
         pygame.mixer.music.set_volume(0.2)
         pygame.mixer.music.play(-1, 0.2, 0) #-1 ist loop
-
 
     def watch_for_events(self) -> None:
         for event in pygame.event.get():
